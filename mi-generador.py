@@ -28,6 +28,9 @@ def generate_docker_compose(output_file: str, num_clients: int):
                     'PYTHONUNBUFFERED=1',
                     'LOGGING_LEVEL=DEBUG'
                 ],
+                'volumes': [
+                    './server/config.ini:/config.ini'
+                ],
                 'networks': ['testing_net']
             }
         },
@@ -50,6 +53,9 @@ def generate_docker_compose(output_file: str, num_clients: int):
             'environment': [
                 f'CLI_ID={client_N}',
                 'CLI_LOG_LEVEL=DEBUG'
+            ],
+            'volumes': [
+                './client/config.yaml:/config.yaml'
             ],
             'networks': ['testing_net'],
             'depends_on': ['server']
