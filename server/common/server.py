@@ -1,6 +1,7 @@
 import socket
 import logging
-
+import signal
+import sys
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -53,6 +54,6 @@ class Server:
 
         # Connection arrived
         logging.info('action: accept_connections | result: in_progress')
-        c, addr = self._server_socket.accept()
+        connection, addr = self._server_socket.accept()
         logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
-        return c
+        return connection
