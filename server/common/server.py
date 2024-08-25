@@ -1,7 +1,6 @@
 import socket
 import logging
-import signal
-import sys
+import threading
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -9,6 +8,8 @@ class Server:
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
+        self._clients = []
+        self._is_running = True
 
     def run(self):
         """
@@ -21,9 +22,16 @@ class Server:
 
         # TODO: Modify this program to handle signal to graceful shutdown
         # the server
-        while True:
-            client_sock = self.__accept_new_connection()
-            self.__handle_client_connection(client_sock)
+        while self._is_running:
+            try:
+                client_sock = self.__accept_new_connection()
+                client_thread = threading.Thread(target=self.__handle_client_connection, args=(client_sock,))
+                client_thread.start()
+                self._clients.append(client_thread)
+            except socket.error as e:
+                if self._running:
+                    logging.error(f"action: accept_new_connection | result: fail | error: {e}")
+
 
     def __handle_client_connection(self, client_sock):
         """
@@ -57,3 +65,16 @@ class Server:
         connection, addr = self._server_socket.accept()
         logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
         return connection
+
+    def shutdown(self):
+        """
+        Gracefully shutdown the server
+        """
+        logging.info('action: shutdown | result: in_progress | reason: graceful_shutdown')
+        self._is_running = False
+        self._server_socket.close()
+        for client in self._clients:
+            client.join()
+        logging.info('action: shutdown | result: all_clients_joined')
+
+
