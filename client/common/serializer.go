@@ -1,15 +1,16 @@
-package serializer
+package common
 
 import (
     "encoding/json"
 )
 
 type Bet struct {
-    Nombre     string `json:"nombre"`
-    Apellido   string `json:"apellido"`
-    DNI        string `json:"dni"`
-    Nacimiento string `json:"nacimiento"`
-    Numero     string `json:"numero"`
+    Agency     int    `json:"agency"`
+    FirstName  string `json:"first_name"`
+    LastName   string `json:"last_name"`
+    Document   string `json:"document"`
+    Birthdate  string `json:"birthdate"` // Format: 'YYYY-MM-DD'
+    Number     int    `json:"number"`
 }
 
 func SerializeBet(bet Bet) ([]byte, error) {
