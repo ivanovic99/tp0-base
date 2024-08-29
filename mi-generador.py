@@ -9,7 +9,7 @@ def generate_docker_compose(output_file: str, num_clients: int):
     """
     Generate a docker-compose file with a server and N clients
 
-    Parameters:
+    Args:
         output_file (str): The output file path
         num_clients (int): The number of clients to generate
     
@@ -51,6 +51,11 @@ def generate_docker_compose(output_file: str, num_clients: int):
             'image': 'client:latest',
             'entrypoint': '/client',
             'environment': [
+                f'NOMBRE=Nombre{client_N}',
+                f'APELLIDO=Apellido{client_N}',
+                f'DOCUMENTO=Documento{client_N}',
+                f'NACIMIENTO=2000-01-01',
+                f'NUMERO={client_N}',
                 f'CLI_ID={client_N}',
                 'CLI_LOG_LEVEL=DEBUG'
             ],
