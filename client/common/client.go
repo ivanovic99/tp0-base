@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/op/go-logging"
-	"github.com/ivanovic99/tp0-base/client/common"
+    "github.com/ivanovic99/tp0-base/client/common/protocol"
 )
 
 var log = logging.MustGetLogger("log")
