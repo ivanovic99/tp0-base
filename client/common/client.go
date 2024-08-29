@@ -1,13 +1,12 @@
 package common
 
 import (
-	"bufio"
-	"fmt"
-	"net"
-	"time"
+    "net"
+    "time"
+    "os"
+	"strconv"
 
-	"github.com/op/go-logging"
-    "github.com/ivanovic99/tp0-base/client/common/protocol"
+    "github.com/op/go-logging"
 )
 
 var log = logging.MustGetLogger("log")
@@ -56,13 +55,22 @@ func (c *Client) createClientSocket() error {
 
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
-	bet := common.Bet{
-        Nombre:     os.Getenv("NOMBRE"),
-        Apellido:   os.Getenv("APELLIDO"),
-        DNI:        os.Getenv("DOCUMENTO"),
-        Nacimiento: os.Getenv("NACIMIENTO"),
-        Numero:     os.Getenv("NUMERO"),
-    }
+	numberStr := os.Getenv("NUMERO")
+	number, err := strconv.Atoi(numberStr)
+	if err != nil {
+		log.Errorf("action: convert_number | result: fail | error: %v", err)
+		return
+	}
+
+	// Create a bet with the data from the environment variables
+	bet := Bet{
+		Agency:     1234,
+		FirstName:  os.Getenv("NOMBRE"),
+		LastName:   os.Getenv("APELLIDO"),
+		Document:   os.Getenv("DOCUMENTO"),
+		Birthdate:  os.Getenv("NACIMIENTO"),
+		Number:     number,
+	}
 	// There is an autoincremental msgID to identify every message sent
 	// Messages if the message amount threshold has not been surpassed
 	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
@@ -75,13 +83,13 @@ func (c *Client) StartClientLoop() {
 			if err := c.createClientSocket(); err != nil {
                 return
             }
-            protocol := common.NewProtocol(c.conn)
+            protocol := NewProtocol(c.conn)
             if err := protocol.SendBet(bet); err != nil {
                 log.Errorf("action: send_bet | result: fail | client_id: %v | error: %v", c.config.ID, err)
                 return
             }
 
-            msg, err := protocol.ReceiveResponse()
+            _, err := protocol.ReceiveResponse()
             c.conn.Close()
 
 			if err != nil {
@@ -91,7 +99,7 @@ func (c *Client) StartClientLoop() {
 				)
 				return
 			}
-
+			
 			log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v",
 				os.Getenv("DOCUMENTO"),
 				os.Getenv("NUMERO"),
