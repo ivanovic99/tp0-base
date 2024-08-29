@@ -92,9 +92,9 @@ func (c *Client) StartClientLoop() {
 				return
 			}
 
-			log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
-				c.config.ID,
-				msg,
+			log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v",
+				os.Getenv("DOCUMENTO"),
+				os.Getenv("NUMERO"),
 			)
 
 			// Wait a time between sending one message and the next one
