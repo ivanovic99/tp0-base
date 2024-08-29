@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/op/go-logging"
+	"github.com/ivanovic99/tp0-base/client/common"
 )
 
 var log = logging.MustGetLogger("log")
@@ -55,6 +56,13 @@ func (c *Client) createClientSocket() error {
 
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
+	bet := common.Bet{
+        Nombre:     os.Getenv("NOMBRE"),
+        Apellido:   os.Getenv("APELLIDO"),
+        DNI:        os.Getenv("DOCUMENTO"),
+        Nacimiento: os.Getenv("NACIMIENTO"),
+        Numero:     os.Getenv("NUMERO"),
+    }
 	// There is an autoincremental msgID to identify every message sent
 	// Messages if the message amount threshold has not been surpassed
 	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
@@ -67,15 +75,14 @@ func (c *Client) StartClientLoop() {
 			if err := c.createClientSocket(); err != nil {
                 return
             }
-			// TODO: Modify the send to avoid short-write
-			fmt.Fprintf(
-				c.conn,
-				"[CLIENT %v] Message N°%v\n",
-				c.config.ID,
-				msgID,
-			)
-			msg, err := bufio.NewReader(c.conn).ReadString('\n')
-			c.conn.Close()
+            protocol := common.NewProtocol(c.conn)
+            if err := protocol.SendBet(bet); err != nil {
+                log.Errorf("action: send_bet | result: fail | client_id: %v | error: %v", c.config.ID, err)
+                return
+            }
+
+            msg, err := protocol.ReceiveResponse()
+            c.conn.Close()
 
 			if err != nil {
 				log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
