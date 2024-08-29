@@ -1,9 +1,8 @@
-package protocol
+package common
 
 import (
     "bufio"
     "net"
-    "github.com/ivanovic99/tp0-base/client/common/serializer"
 
 )
 
