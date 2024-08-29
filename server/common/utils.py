@@ -24,6 +24,27 @@ class Bet:
         self.birthdate = datetime.date.fromisoformat(birthdate)
         self.number = int(number)
 
+    def to_dict(self):
+        return {
+            "agency": self.agency,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "document": self.document,
+            "birthdate": self.birthdate.isoformat(),
+            "number": self.number
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            agency=data["agency"],
+            first_name=data["first_name"],
+            last_name=data["last_name"],
+            document=data["document"],
+            birthdate=data["birthdate"],
+            number=data["number"]
+        )
+
 """ Checks whether a bet won the prize or not. """
 def has_won(bet: Bet) -> bool:
     return bet.number == LOTTERY_WINNER_NUMBER
