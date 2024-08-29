@@ -23,7 +23,6 @@ class Server:
         """
 
         # the server
-        logging.info(f"Server started on port {self.port}")
         while self._is_running:
             try:
                 client_sock = self.__accept_new_connection()
@@ -45,9 +44,9 @@ class Server:
         try:
             protocol = Protocol(client_sock)
             bet = protocol.receive_bet()
-            logging.info(f'action: receive_message | result: success | dni: {bet.dni} | numero: {bet.numero}')
-            store_bets(bet)
-            logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.dni} | numero: {bet.numero}')
+            logging.info(f'action: receive_message | result: success | dni: {bet.document} | numero: {bet.number}')
+            store_bets([bet])
+            logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}')
             protocol.send_bet(bet)
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
