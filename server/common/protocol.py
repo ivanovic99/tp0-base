@@ -1,5 +1,7 @@
-import socket
 from .serializer import serialize_bet, deserialize_bet
+import struct
+
+AMMOUNT_OF_BYTES = 4
 
 class Protocol:
     def __init__(self, conn):
@@ -10,6 +12,15 @@ class Protocol:
         self.conn.sendall(data + b'\n')
 
     def receive_bet(self):
-        # Change the way we receive data, we need to remove the trailing newline character. 1024 is the maximum size of the data we can receive but it is fixed, we should change it to a variable that can be received.
-        data = self.conn.recv(1024).rstrip()
-        return deserialize_bet(data)
+        length_data = self.conn.recv(AMMOUNT_OF_BYTES)
+        if len(length_data) < AMMOUNT_OF_BYTES:
+            raise ValueError("Incomplete length data received")
+
+        length = struct.unpack('!I', length_data)[0]
+
+        data = self.conn.recv(length)
+        if len(data) < length:
+            raise ValueError("Incomplete bet data received")
+
+        bet = deserialize_bet(data)
+        return bet

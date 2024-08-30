@@ -56,20 +56,24 @@ func (c *Client) createClientSocket() error {
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
 	numberStr := os.Getenv("NUMERO")
-	number, err := strconv.Atoi(numberStr)
+	numero, err := strconv.Atoi(numberStr)
 	if err != nil {
 		log.Errorf("action: convert_number | result: fail | error: %v", err)
 		return
 	}
+	nombre := os.Getenv("NOMBRE")
+	apellido := os.Getenv("APELLIDO")
+	documento := os.Getenv("DOCUMENTO")
+	nacimiento := os.Getenv("NACIMIENTO")
 
 	// Create a bet with the data from the environment variables
 	bet := Bet{
 		Agency:     1234,
-		FirstName:  os.Getenv("NOMBRE"),
-		LastName:   os.Getenv("APELLIDO"),
-		Document:   os.Getenv("DOCUMENTO"),
-		Birthdate:  os.Getenv("NACIMIENTO"),
-		Number:     number,
+		FirstName: nombre,
+		LastName:  apellido,
+		Document:  documento,
+		Birthdate: nacimiento,
+		Number:    numero,
 	}
 	// There is an autoincremental msgID to identify every message sent
 	// Messages if the message amount threshold has not been surpassed
@@ -87,23 +91,14 @@ func (c *Client) StartClientLoop() {
             if err := protocol.SendBet(bet); err != nil {
                 log.Errorf("action: send_bet | result: fail | client_id: %v | error: %v", c.config.ID, err)
                 return
-            }
+            }			
 
-            _, err := protocol.ReceiveResponse()
-            c.conn.Close()
-
-			if err != nil {
-				log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
-					c.config.ID,
-					err,
-				)
-				return
-			}
-			
 			log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v",
-				os.Getenv("DOCUMENTO"),
-				os.Getenv("NUMERO"),
+				documento,
+				numero,
 			)
+
+            c.conn.Close()
 
 			// Wait a time between sending one message and the next one
 			time.Sleep(c.config.LoopPeriod)

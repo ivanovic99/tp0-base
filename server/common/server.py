@@ -47,7 +47,6 @@ class Server:
             logging.info(f'action: receive_message | result: success | dni: {bet.document} | numero: {bet.number}')
             store_bets([bet])
             logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}')
-            protocol.send_bet(bet)
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
         finally:

@@ -1,8 +1,8 @@
 package common
 
 import (
-    "bufio"
     "net"
+    "encoding/binary"
 
 )
 
@@ -15,7 +15,17 @@ func NewProtocol(conn net.Conn) *Protocol {
 }
 
 func (protocol *Protocol) SendBet(bet Bet) error {
+
     data, err := SerializeBet(bet)
+    if err != nil {
+        return err
+    }
+
+    length := uint32(len(data))
+    lengthBuf := make([]byte, 4)
+    binary.BigEndian.PutUint32(lengthBuf, length)
+
+    _, err = protocol.conn.Write(lengthBuf)
     if err != nil {
         return err
     }
@@ -26,12 +36,4 @@ func (protocol *Protocol) SendBet(bet Bet) error {
     }
 
     return nil
-}
-
-func (protocol *Protocol) ReceiveResponse() (string, error) {
-    msg, err := bufio.NewReader(protocol.conn).ReadString('\n')
-    if err != nil {
-        return "", err
-    }
-    return msg, nil
 }
