@@ -105,7 +105,6 @@ func (c *Client) StartClientLoop() {
     protocol := NewProtocol(c.conn)
     defer c.conn.Close()
     
-    bets = bets[:53]
     if err := protocol.AmountOfBets(uint32(len(bets))); err != nil {
         log.Errorf("action: amount_of_bets | result: fail | client_id: %v | error: %v", c.config.ID, err)
         return
