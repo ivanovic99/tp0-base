@@ -1,6 +1,8 @@
 package common
 
 import (
+	"bufio"
+	"encoding/csv"
     "net"
     "time"
     "os"
@@ -17,6 +19,7 @@ type ClientConfig struct {
 	ServerAddress string
 	LoopAmount    int
 	LoopPeriod    time.Duration
+	BatchMaxAmount	 int
 }
 
 // Client Entity that encapsulates how
@@ -53,59 +56,104 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
+// ReadBetsFromFile Reads bets from a CSV file
+func ReadBetsFromFile(filePath string, agencyID string) ([]Bet, error) {
+    file, err := os.Open(filePath)
+    if err != nil {
+        return nil, err
+    }
+    defer file.Close()
+
+    var bets []Bet
+    reader := csv.NewReader(bufio.NewReader(file))
+    for {
+        line, err := reader.Read()
+        if err != nil {
+            break
+        }
+        agency, _ := strconv.Atoi(agencyID)
+        number, _ := strconv.Atoi(line[4])
+        bet := Bet{
+            Agency:    agency,
+            FirstName: line[0],
+            LastName:  line[1],
+            Document:  line[2],
+            Birthdate: line[3],
+            Number:    number,
+        }
+        bets = append(bets, bet)
+    }
+    return bets, nil
+}
+
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
-	numberStr := os.Getenv("NUMERO")
-	numero, err := strconv.Atoi(numberStr)
-	if err != nil {
-		log.Errorf("action: convert_number | result: fail | error: %v", err)
-		return
-	}
-	nombre := os.Getenv("NOMBRE")
-	apellido := os.Getenv("APELLIDO")
-	documento := os.Getenv("DOCUMENTO")
-	nacimiento := os.Getenv("NACIMIENTO")
+    bets, err := ReadBetsFromFile("./app/.data/dataset/agency-" + c.config.ID + ".csv", c.config.ID)
+    if err != nil {
+        log.Errorf("action: read_bets | result: fail | error: %v", err)
+        return
+    }
+    log.Infof("action: read_bets | result: success | total_bets: %v", len(bets))
+    if c.config.BatchMaxAmount > 10 {
+        log.Infof("action: config | result: adjust_batch_maxAmount | original_value: %v | new_value: 10", c.config.BatchMaxAmount)
+        c.config.BatchMaxAmount = 10
+    }
 
-	// Create a bet with the data from the environment variables
-	bet := Bet{
-		Agency:     1234,
-		FirstName: nombre,
-		LastName:  apellido,
-		Document:  documento,
-		Birthdate: nacimiento,
-		Number:    numero,
-	}
-	// There is an autoincremental msgID to identify every message sent
-	// Messages if the message amount threshold has not been surpassed
-	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
-		select {
+    if err := c.createClientSocket(); err != nil {
+        return
+    }
+    protocol := NewProtocol(c.conn)
+    defer c.conn.Close()
+    
+    bets = bets[:53]
+    if err := protocol.AmountOfBets(uint32(len(bets))); err != nil {
+        log.Errorf("action: amount_of_bets | result: fail | client_id: %v | error: %v", c.config.ID, err)
+        return
+    }
+    log.Infof("action: amount_of_bets | result: success | client_id: %v | amount_of_bets: %v", c.config.ID, len(bets))
+
+    for bet_number := 0; bet_number < len(bets); bet_number += c.config.BatchMaxAmount {
+        end := bet_number + c.config.BatchMaxAmount
+        if end > len(bets) {
+            end = len(bets)
+        }
+        batch := bets[bet_number:end]
+        
+        log.Infof("action: read_bets | result: success | batch_number: %v", bet_number)
+        log.Infof("action: read_bets | result: success | batch_end: %v", end)
+        log.Infof("action: read_bets | result: success | batch_with_bets: %v", batch)
+        log.Infof("action: read_bets | result: success | batch_len: %v", len(batch))
+
+        select {
         case <-c.stop:
             log.Infof("action: stop_client_loop | result: success | client_id: %v", c.config.ID)
             return
         default:
-			// Create the connection the server in every loop iteration. Send an
-			if err := c.createClientSocket(); err != nil {
+            
+            if err := protocol.SendBets(batch); err != nil {
+                log.Errorf("action: send_bets | result: fail | client_id: %v | error: %v", c.config.ID, err)
                 return
             }
-            protocol := NewProtocol(c.conn)
-            if err := protocol.SendBet(bet); err != nil {
-                log.Errorf("action: send_bet | result: fail | client_id: %v | error: %v", c.config.ID, err)
-                return
-            }			
 
-			log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v",
-				documento,
-				numero,
-			)
+            log.Infof("action: apuestas_enviadas | result: success | cantidad: %v", len(batch))
 
-            c.conn.Close()
+            time.Sleep(c.config.LoopPeriod)
+        }
+    }
+    
+    ok, err := protocol.ReceiveOk()
+    if err != nil {
+        log.Errorf("action: receive_ok | result: fail | client_id: %v | error: %v", c.config.ID, err)
+        return
+    }
+    if ok {
+        log.Infof("action: receive_ok | result: success | client_id: %v", c.config.ID)
+        log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
+        } else {
+        log.Infof("action: receive_ok | result: success | client_id: %v", c.config.ID)
+        log.Infof("action: loop_finished | result: failure | message: Not all batches could be correctly processed | client_id: %v", c.config.ID)
+    }
 
-			// Wait a time between sending one message and the next one
-			time.Sleep(c.config.LoopPeriod)
-
-		}
-	}
-	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 }
 
 // StopClientLoop Stops the client loop and closes the connection
