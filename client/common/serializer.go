@@ -13,6 +13,6 @@ type Bet struct {
     Number     int    `json:"number"`
 }
 
-func SerializeBet(bet Bet) ([]byte, error) {
-    return json.Marshal(bet)
+func SerializeBets(bets []Bet) ([]byte, error) {
+    return json.Marshal(bets)
 }
