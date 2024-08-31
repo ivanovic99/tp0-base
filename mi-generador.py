@@ -60,7 +60,8 @@ def generate_docker_compose(output_file: str, num_clients: int):
                 'CLI_LOG_LEVEL=DEBUG'
             ],
             'volumes': [
-                './client/config.yaml:/config.yaml'
+                './client/config.yaml:/config.yaml',
+                './.data/dataset:/app/.data/dataset'
             ],
             'networks': ['testing_net'],
             'depends_on': ['server']
