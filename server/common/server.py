@@ -43,12 +43,30 @@ class Server:
         """
         try:
             protocol = Protocol(client_sock)
-            bet = protocol.receive_bet()
-            logging.info(f'action: receive_message | result: success | dni: {bet.document} | numero: {bet.number}')
-            store_bets([bet])
-            logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}')
-        except OSError as e:
-            logging.error("action: receive_message | result: fail | error: {e}")
+            total_bets = protocol.receive_total_bets()
+            logging.info(f"action: receive_total_bets | result: success | total_bets: {total_bets}")
+
+            received_bets = 0
+            while received_bets < total_bets:
+                try:
+                    bets = protocol.receive_bets()
+                    if not bets:
+                        break
+                    try:
+                        store_bets(bets)
+                        received_bets += len(bets)
+                        logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(bets)}')
+                    except Exception as e:
+                        logging.info(f'action: apuesta_recibida | result: fail | cantidad: {len(bets)}')
+                except Exception as e:
+                    logging.error("action: receive_message | result: fail | error: {e}")
+                    break
+            if received_bets == total_bets:
+                logging.info("action: receive_all_bets | result: success")
+                protocol.send_ok(True)
+            else:
+                logging.error("action: receive_all_bets | result: fail | received_bets: {received_bets} | total_bets: {total_bets}")
+                protocol.send_ok(False)
         finally:
             client_sock.close()
 
