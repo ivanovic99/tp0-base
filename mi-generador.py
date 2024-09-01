@@ -26,7 +26,8 @@ def generate_docker_compose(output_file: str, num_clients: int):
                 'entrypoint': 'python3 /main.py',
                 'environment': [
                     'PYTHONUNBUFFERED=1',
-                    'LOGGING_LEVEL=DEBUG'
+                    'LOGGING_LEVEL=DEBUG',
+                    'TOTAL_CLIENTS={}'.format(num_clients)
                 ],
                 'volumes': [
                     './server/config.ini:/config.ini'
