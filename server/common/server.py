@@ -1,10 +1,11 @@
 import socket
 import logging
-import threading
+import multiprocessing
 from .protocol import Protocol
 from .utils import store_bets, load_bets, has_won
+import os
 
-TOTAL_CLIENTS = 2
+TOTAL_CLIENTS = int(os.environ.get('TOTAL_CLIENTS'))
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -14,10 +15,13 @@ class Server:
         self._server_socket.listen(listen_backlog)
         self._clients = []
         self._is_running = True
-        self._finished_clients = 0
+        self._finished_clients = multiprocessing.Value('i', 0)
         self._total_clients = TOTAL_CLIENTS
-        self._winners = {1: [], 2: []}
-        self._barrier = threading.Barrier(self._total_clients)
+        self._winners = multiprocessing.Manager().dict()
+        for i in range(1, TOTAL_CLIENTS + 1):
+            self._winners[i] = []
+        self._barrier = multiprocessing.Barrier(self._total_clients)
+        self._lock = multiprocessing.Lock() 
 
 
     def run(self):
@@ -33,9 +37,9 @@ class Server:
         while self._is_running:
             try:
                 client_sock = self.__accept_new_connection()
-                client_thread = threading.Thread(target=self.__handle_client_connection, args=(client_sock,))
-                client_thread.start()
-                self._clients.append(client_thread)
+                client_process = multiprocessing.Process(target=self.__handle_client_connection, args=(client_sock,))
+                client_process.start()
+                self._clients.append(client_process)
             except socket.error as e:
                 if self._running:
                     logging.error(f"action: accept_new_connection | result: fail | error: {e}")
@@ -59,7 +63,8 @@ class Server:
                         if not bets:
                             has_finished = True
                         try:
-                            store_bets(bets)
+                            with self._lock:
+                                store_bets(bets)
                             logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(bets)}')
                         except Exception as e:
                             logging.info(f'action: apuesta_recibida | result: fail | cantidad: {len(bets)}')
@@ -75,8 +80,8 @@ class Server:
             logging.info("action: receive_all_bets | result: success")
             protocol.send_ok(True)
 
-            self._finished_clients += 1
-            if self._finished_clients == self._total_clients:
+            self._finished_clients.value += 1
+            if self._finished_clients.value == self._total_clients:
                 logging.info("action: sorteo | result: success")
                 self.__perform_draw()
 
@@ -93,8 +98,8 @@ class Server:
                 if agency_id in self._winners:
                     winners = self._winners[agency_id]
                     logging.info(f'action: send_winners | result: in_progress | winners: {winners}')
-                    protocol.send_winners(winners)
-                    logging.info(f'action: winners_sent | result: success')
+                protocol.send_winners(winners)
+                logging.info(f'action: winners_sent | result: success')
             else:
                 logging.error("action: receive_message | result: fail | error: invalid case_id")
                 client_sock.close()
@@ -136,5 +141,6 @@ class Server:
         logging.info(f'action: sorteo | result: in_progress | cantidad: {len(bets)}')
         for bet in bets:
             if has_won(bet):
-                logging.info(f'action: sorteo | result: winner | winner_id: {bet.document}')
-                self._winners[bet.agency].append(bet.document)
+                temp_winners_list = self._winners[bet.agency]
+                temp_winners_list.append(bet.document)
+                self._winners[bet.agency] = temp_winners_list
