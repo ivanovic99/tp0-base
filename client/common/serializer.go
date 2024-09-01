@@ -16,3 +16,9 @@ type Bet struct {
 func SerializeBets(bets []Bet) ([]byte, error) {
     return json.Marshal(bets)
 }
+
+func DeserializeWinners(data []byte) ([]string, error) {
+    var winners []string
+    err := json.Unmarshal(data, &winners)
+    return winners, err
+}
