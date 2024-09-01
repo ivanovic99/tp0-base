@@ -104,12 +104,6 @@ func (c *Client) StartClientLoop() {
     }
     protocol := NewProtocol(c.conn)
     defer c.conn.Close()
-    
-    if err := protocol.AmountOfBets(uint32(len(bets))); err != nil {
-        log.Errorf("action: amount_of_bets | result: fail | client_id: %v | error: %v", c.config.ID, err)
-        return
-    }
-    log.Infof("action: amount_of_bets | result: success | client_id: %v | amount_of_bets: %v", c.config.ID, len(bets))
 
     for bet_number := 0; bet_number < len(bets); bet_number += c.config.BatchMaxAmount {
         end := bet_number + c.config.BatchMaxAmount
@@ -117,11 +111,6 @@ func (c *Client) StartClientLoop() {
             end = len(bets)
         }
         batch := bets[bet_number:end]
-        
-        log.Infof("action: read_bets | result: success | batch_number: %v", bet_number)
-        log.Infof("action: read_bets | result: success | batch_end: %v", end)
-        log.Infof("action: read_bets | result: success | batch_with_bets: %v", batch)
-        log.Infof("action: read_bets | result: success | batch_len: %v", len(batch))
 
         select {
         case <-c.stop:
@@ -139,7 +128,10 @@ func (c *Client) StartClientLoop() {
             time.Sleep(c.config.LoopPeriod)
         }
     }
-    
+    if err := protocol.SendOk(); err != nil {
+        log.Errorf("action: send_bets | result: fail | client_id: %v | error: %v", c.config.ID, err)
+        return
+    }
     ok, err := protocol.ReceiveOk()
     if err != nil {
         log.Errorf("action: receive_ok | result: fail | client_id: %v | error: %v", c.config.ID, err)
@@ -152,6 +144,14 @@ func (c *Client) StartClientLoop() {
         log.Infof("action: receive_ok | result: success | client_id: %v", c.config.ID)
         log.Infof("action: loop_finished | result: failure | message: Not all batches could be correctly processed | client_id: %v", c.config.ID)
     }
+
+    agencyID, _ := strconv.Atoi(c.config.ID)
+    winners, err := protocol.ReceiveWinners(agencyID)
+    if err != nil {
+        log.Errorf("action: receive_winners | result: fail | client_id: %v | error: %v", c.config.ID, err)
+        return
+    }
+    log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", len(winners))
 
 }
 

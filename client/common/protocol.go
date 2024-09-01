@@ -11,12 +11,26 @@ type Protocol struct {
 }
 
 const AMMOUNT_OF_BYTES = 4
+const BETS = 0x01
+const OK = 0x02
+const WINNERS = 0x03
 
 func NewProtocol(conn net.Conn) *Protocol {
     return &Protocol{conn: conn}
 }
 
+func (protocol *Protocol) _sendCase(caseType byte) error {
+    _, err := protocol.conn.Write([]byte{caseType})
+    return err
+}
+
+
 func (protocol *Protocol) SendBets(bets []Bet) error {
+
+    if err := protocol._sendCase(BETS); err != nil {
+        return err
+    }
+
     data, err := SerializeBets(bets)
     if err != nil {
         return err
@@ -39,26 +53,54 @@ func (protocol *Protocol) SendBets(bets []Bet) error {
     return nil
 }
 
-func (protocol *Protocol) AmountOfBets(totalBets uint32) error {
-    // Convert the total number of bets to a byte slice
-    totalBetsBytes := make([]byte, AMMOUNT_OF_BYTES)
-    binary.BigEndian.PutUint32(totalBetsBytes, totalBets)
-    
-    // Send the byte slice over the connection
-    _, err := protocol.conn.Write(totalBetsBytes)
-    return err
+func (protocol *Protocol) SendOk() error {
+    if err := protocol._sendCase(OK); err != nil {
+        return err
+    }
+    return nil
 }
 
-func (protocol *Protocol) ReceiveOk() (bool, error) {
-    // Read the response from the server, only one byte
+func (protocol *Protocol) ReceiveOk() (bool, error) {   
     response := make([]byte, 1)
     _, err := protocol.conn.Read(response)
     if err != nil {
         return false, err
     }
-    if response[0] == 0x01 {
-        return true, nil
-    } else {
-        return false, nil
+    return response[0] == OK, nil
+    
+}
+
+func (protocol *Protocol) ReceiveWinners(agencyID int) ([]string, error) {
+    if err := protocol._sendCase(WINNERS); err != nil {
+        return nil, err
     }
+    
+        
+    agencyIDBuf := make([]byte, AMMOUNT_OF_BYTES)
+    binary.BigEndian.PutUint32(agencyIDBuf, uint32(agencyID))
+
+    _, err := protocol.conn.Write(agencyIDBuf)
+    if err != nil {
+        return nil, err
+    }
+
+    response := make([]byte, AMMOUNT_OF_BYTES)
+    _, err = protocol.conn.Read(response)
+    if err != nil {
+        return nil, err
+    }
+    length := binary.BigEndian.Uint32(response)
+
+    data := make([]byte, length)
+    _, err = protocol.conn.Read(data)
+    if err != nil {
+        return nil, err
+    }
+    
+    winners, err := DeserializeWinners(data)
+    if err != nil {
+        return nil, err
+    }
+
+    return winners, nil
 }
