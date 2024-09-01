@@ -16,6 +16,7 @@ class Server:
         self._clients = []
         self._is_running = True
         self._finished_clients = multiprocessing.Value('i', 0)
+        self._draw_finished = multiprocessing.Value('b', False)
         self._total_clients = TOTAL_CLIENTS
         self._winners = multiprocessing.Manager().dict()
         for i in range(1, TOTAL_CLIENTS + 1):
@@ -81,9 +82,11 @@ class Server:
             protocol.send_ok(True)
 
             self._finished_clients.value += 1
-            if self._finished_clients.value == self._total_clients:
-                logging.info("action: sorteo | result: success")
-                self.__perform_draw()
+            with self._lock:
+                if self._finished_clients.value == self._total_clients and not self._draw_finished.value:
+                    logging.info("action: sorteo | result: success")
+                    self.__perform_draw()
+                    self._draw_finished.value = True
 
             case_id = protocol.receive_case()
             if case_id == 3:
