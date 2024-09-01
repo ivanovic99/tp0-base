@@ -1,32 +1,41 @@
 """
-Generates a docker-compose file with a server and N clients
+Generates a docker-compose file with a server and N clients.
 """
 
 import sys
 import yaml
+from typing import Dict, Any
 
-def generate_docker_compose(output_file: str, num_clients: int):
+# Constants
+DOCKER_COMPOSE_VERSION = '3.8'
+NETWORK_SUBNET = '172.25.125.0/24'
+SERVER_IMAGE = 'server:latest'
+CLIENT_IMAGE = 'client:latest'
+SERVER_ENTRYPOINT = 'python3 /main.py'
+CLIENT_ENTRYPOINT = '/client'
+LOGGING_LEVEL = 'DEBUG'
+
+def generate_docker_compose(output_file: str, num_clients: int) -> None:
     """
-    Generate a docker-compose file with a server and N clients
+    Generate a docker-compose file with a server and N clients.
 
     Parameters:
-        output_file (str): The output file path
-        num_clients (int): The number of clients to generate
+        output_file (str): The output file path.
+        num_clients (int): The number of clients to generate.
     
     Returns:
         None
     """
-
-    docker_compose = {
-        'name': 'tp0',
+    docker_compose: Dict[str, Any] = {
+        'version': DOCKER_COMPOSE_VERSION,
         'services': {
             'server': {
                 'container_name': 'server',
-                'image': 'server:latest',
-                'entrypoint': 'python3 /main.py',
+                'image': SERVER_IMAGE,
+                'entrypoint': SERVER_ENTRYPOINT,
                 'environment': [
                     'PYTHONUNBUFFERED=1',
-                    'LOGGING_LEVEL=DEBUG'
+                    f'LOGGING_LEVEL={LOGGING_LEVEL}'
                 ],
                 'networks': ['testing_net']
             }
@@ -35,7 +44,7 @@ def generate_docker_compose(output_file: str, num_clients: int):
             'testing_net': {
                 'ipam': {
                     'driver': 'default',
-                    'config': [{'subnet': '172.25.125.0/24'}]
+                    'config': [{'subnet': NETWORK_SUBNET}]
                 }
             }
         }
@@ -45,18 +54,23 @@ def generate_docker_compose(output_file: str, num_clients: int):
         client_name = f'client{client_N}'
         docker_compose['services'][client_name] = {
             'container_name': client_name,
-            'image': 'client:latest',
-            'entrypoint': '/client',
+            'image': CLIENT_IMAGE,
+            'entrypoint': CLIENT_ENTRYPOINT,
             'environment': [
                 f'CLI_ID={client_N}',
-                'CLI_LOG_LEVEL=DEBUG'
+                f'CLI_LOG_LEVEL={LOGGING_LEVEL}'
             ],
             'networks': ['testing_net'],
             'depends_on': ['server']
         }
 
-    with open(output_file, 'w') as file:
-        yaml.dump(docker_compose, file, default_flow_style=False)
+    try:
+        with open(output_file, 'w') as file:
+            yaml.dump(docker_compose, file, default_flow_style=False)
+        print(f"Docker-compose file generated successfully: {output_file}")
+    except IOError as e:
+        print(f"Failed to write docker-compose file: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
@@ -64,5 +78,10 @@ if __name__ == "__main__":
         sys.exit(1)
 
     output_file = sys.argv[1]
-    num_clients = int(sys.argv[2])
+    try:
+        num_clients = int(sys.argv[2])
+    except ValueError:
+        print("The number of clients must be an integer.")
+        sys.exit(1)
+
     generate_docker_compose(output_file, num_clients)
