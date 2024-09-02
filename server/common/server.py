@@ -75,6 +75,5 @@ class Server:
         self._server_socket.close()
         for client in self._clients:
             client.join()
-        logging.info('action: shutdown | result: all_clients_joined')
 
 

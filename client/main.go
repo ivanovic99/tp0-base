@@ -123,7 +123,6 @@ func main() {
         sig := <-sigChan
         log.Infof("action: shutdown with signal: %s | result: in_progress | reason: graceful_shutdown", sig)
         client.StopClientLoop()
-        log.Infof("action: shutdown | result: shutdown_complete")
         os.Exit(0)
     }()
 
