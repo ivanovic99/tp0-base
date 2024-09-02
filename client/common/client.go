@@ -11,6 +11,8 @@ import (
     "github.com/op/go-logging"
 )
 
+const EIGHT_KB_IN_BATCHES = 10  // 8KB
+
 var log = logging.MustGetLogger("log")
 
 // ClientConfig Configuration used by the client
@@ -94,9 +96,9 @@ func (c *Client) StartClientLoop() {
         return
     }
     log.Infof("action: read_bets | result: success | total_bets: %v", len(bets))
-    if c.config.BatchMaxAmount > 10 {
+    if c.config.BatchMaxAmount > EIGHT_KB_IN_BATCHES {
         log.Infof("action: config | result: adjust_batch_maxAmount | original_value: %v | new_value: 10", c.config.BatchMaxAmount)
-        c.config.BatchMaxAmount = 10
+        c.config.BatchMaxAmount = EIGHT_KB_IN_BATCHES
     }
 
     if err := c.createClientSocket(); err != nil {
