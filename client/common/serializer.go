@@ -18,32 +18,26 @@ type Bet struct {
 func SerializeBets(bets []Bet) ([]byte, error) {
     buf := new(bytes.Buffer)
     for _, bet := range bets {
-        // Serialize Agency
         if err := binary.Write(buf, binary.BigEndian, int32(bet.Agency)); err != nil {
             return nil, fmt.Errorf("failed to serialize agency: %w", err)
         }
 
-        // Serialize FirstName
         if err := serializeString(buf, bet.FirstName); err != nil {
             return nil, fmt.Errorf("failed to serialize first name: %w", err)
         }
 
-        // Serialize LastName
         if err := serializeString(buf, bet.LastName); err != nil {
             return nil, fmt.Errorf("failed to serialize last name: %w", err)
         }
 
-        // Serialize Document
         if err := serializeString(buf, bet.Document); err != nil {
             return nil, fmt.Errorf("failed to serialize document: %w", err)
         }
 
-        // Serialize Birthdate
         if err := serializeString(buf, bet.Birthdate); err != nil {
             return nil, fmt.Errorf("failed to serialize birthdate: %w", err)
         }
 
-        // Serialize Number
         if err := binary.Write(buf, binary.BigEndian, int32(bet.Number)); err != nil {
             return nil, fmt.Errorf("failed to serialize number: %w", err)
         }

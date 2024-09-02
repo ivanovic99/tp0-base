@@ -66,7 +66,6 @@ class Server:
                         try:
                             with self._lock:
                                 store_bets(bets)
-                            logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(bets)}')
                         except Exception as e:
                             logging.info(f'action: apuesta_recibida | result: fail | cantidad: {len(bets)}')
                     elif case_id == 2:
@@ -90,17 +89,15 @@ class Server:
 
             case_id = protocol.receive_case()
             if case_id == 3:
-                logging.info(f'action: receive_case | result: success | case_id: {case_id}')
                 agency_id = protocol.receive_agency_id()
-                logging.info(f'action: receive_agency_id | result: success | agency_id: {agency_id}')
                 # Wait at the barrier
-                logging.info(f'action: winners_status_BEFORE_barrier | result: in_progress | winners: {self._winners}')
+                logging.info(f'action: winners_status_BEFORE_barrier | result: in_progress | winners: {self._winners} | agency_id: {agency_id}')
                 self._barrier.wait()
-                logging.info(f'action: winners_status_AFTER_barrier | result: in_progress | winners: {self._winners}')
+                logging.info(f'action: winners_status_AFTER_barrier | result: in_progress | winners: {self._winners} | agency_id: {agency_id}')
                 winners = []
                 if agency_id in self._winners:
                     winners = self._winners[agency_id]
-                    logging.info(f'action: send_winners | result: in_progress | winners: {winners}')
+                    logging.info(f'action: send_winners | result: in_progress | winners: {winners} | agency_id: {agency_id}')
                 protocol.send_winners(winners)
                 logging.info(f'action: winners_sent | result: success')
             else:
