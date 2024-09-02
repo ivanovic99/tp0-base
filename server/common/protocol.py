@@ -1,4 +1,4 @@
-from .serializer import serialize_bet, deserialize_bet
+from .serializer import deserialize_bet
 import struct
 
 AMMOUNT_OF_BYTES = 4
@@ -7,9 +7,6 @@ class Protocol:
     def __init__(self, conn):
         self.conn = conn
 
-    def send_bet(self, bet):
-        data = serialize_bet(bet)
-        self.conn.sendall(data + b'\n')
 
     def receive_bet(self):
         length_data = self.conn.recv(AMMOUNT_OF_BYTES)
