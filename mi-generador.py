@@ -33,10 +33,10 @@ def generate_docker_compose(output_file: str, num_clients: int) -> None:
                 'container_name': 'server',
                 'image': SERVER_IMAGE,
                 'entrypoint': SERVER_ENTRYPOINT,
-                'environment': [
-                    'PYTHONUNBUFFERED=1',
-                    f'LOGGING_LEVEL={LOGGING_LEVEL}'
-                ],
+                # 'environment': [
+                #     'PYTHONUNBUFFERED=1',
+                #     f'LOGGING_LEVEL={LOGGING_LEVEL}'
+                # ],
                 'networks': ['testing_net']
             }
         },
@@ -56,10 +56,10 @@ def generate_docker_compose(output_file: str, num_clients: int) -> None:
             'container_name': client_name,
             'image': CLIENT_IMAGE,
             'entrypoint': CLIENT_ENTRYPOINT,
-            'environment': [
-                f'CLI_ID={client_N}',
-                f'CLI_LOG_LEVEL={LOGGING_LEVEL}'
-            ],
+            # 'environment': [
+            #     f'CLI_ID={client_N}',
+            #     f'CLI_LOG_LEVEL={LOGGING_LEVEL}'
+            # ],
             'networks': ['testing_net'],
             'depends_on': ['server']
         }
