@@ -12,6 +12,7 @@ class Server:
         self._server_socket.listen(listen_backlog)
         self._clients = []
         self._is_running = True
+        self._lock = threading.Lock()
 
     def run(self):
         """
@@ -45,7 +46,8 @@ class Server:
             protocol = Protocol(client_sock)
             bet = protocol.receive_bet()
             logging.info(f'action: receive_message | result: success | dni: {bet.document} | numero: {bet.number}')
-            store_bets([bet])
+            with self._lock:
+                store_bets([bet])
             logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}')
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
