@@ -12,7 +12,7 @@ class Protocol:
         data = self._recv_n_bytes(1)
         if len(data) < 1:
             raise ValueError("Incomplete case ID received")
-        case_id = ord(data)
+        case_id = data[0]
         return case_id
 
     def receive_agency_id(self):
@@ -27,8 +27,8 @@ class Protocol:
         """Send the documents of the winners to the client."""
         data = serialize_winners(documents_of_winners)
         length = len(data).to_bytes(AMOUNT_OF_BYTES, byteorder='big')
-        self.conn.sendall(length)
-        self.conn.sendall(data)
+        self._send_all(length)
+        self._send_all(data)
 
     def receive_bets(self):
         """Receive a list of bets from the client."""
@@ -55,8 +55,17 @@ class Protocol:
             data.extend(packet)
         return bytes(data)
 
+    def _send_all(self, data):
+        """Helper method to send all bytes or raise an error."""
+        total_sent = 0
+        while total_sent < len(data):
+            sent = self.conn.send(data[total_sent:])
+            if sent == 0:
+                raise ValueError("Connection closed before sending all data")
+            total_sent += sent
+
     def receive_total_bets(self):
-        total_bets_bytes = self.conn.recv(AMOUNT_OF_BYTES)
+        total_bets_bytes = self._recv_n_bytes(AMOUNT_OF_BYTES)
         if len(total_bets_bytes) < AMOUNT_OF_BYTES:
             raise ValueError("Failed to receive total bets")
         total_bets = int.from_bytes(total_bets_bytes, byteorder='big')
@@ -64,4 +73,4 @@ class Protocol:
     
     def send_ok(self, ok):
         data = b'\x02' if ok else b'\x00'
-        self.conn.sendall(data)
+        self._send_all(data)

@@ -3,7 +3,6 @@ package common
 import (
     "net"
     "encoding/binary"
-
 )
 
 type Protocol struct {
@@ -20,13 +19,10 @@ func NewProtocol(conn net.Conn) *Protocol {
 }
 
 func (protocol *Protocol) _sendCase(caseType byte) error {
-    _, err := protocol.conn.Write([]byte{caseType})
-    return err
+    return protocol.writeAll([]byte{caseType})
 }
 
-
 func (protocol *Protocol) SendBets(bets []Bet) error {
-
     if err := protocol._sendCase(BETS); err != nil {
         return err
     }
@@ -40,13 +36,11 @@ func (protocol *Protocol) SendBets(bets []Bet) error {
     lengthBuf := make([]byte, AMMOUNT_OF_BYTES)
     binary.BigEndian.PutUint32(lengthBuf, length)
 
-    _, err = protocol.conn.Write(lengthBuf)
-    if err != nil {
+    if err := protocol.writeAll(lengthBuf); err != nil {
         return err
     }
 
-    _, err = protocol.conn.Write(data)
-    if err != nil {
+    if err := protocol.writeAll(data); err != nil {
         return err
     }
 
@@ -54,53 +48,68 @@ func (protocol *Protocol) SendBets(bets []Bet) error {
 }
 
 func (protocol *Protocol) SendOk() error {
-    if err := protocol._sendCase(OK); err != nil {
-        return err
-    }
-    return nil
+    return protocol._sendCase(OK)
 }
 
-func (protocol *Protocol) ReceiveOk() (bool, error) {   
+func (protocol *Protocol) ReceiveOk() (bool, error) {
     response := make([]byte, 1)
-    _, err := protocol.conn.Read(response)
-    if err != nil {
+    if err := protocol.readAll(response); err != nil {
         return false, err
     }
     return response[0] == OK, nil
-    
 }
 
 func (protocol *Protocol) ReceiveWinners(agencyID int) ([]string, error) {
     if err := protocol._sendCase(WINNERS); err != nil {
         return nil, err
     }
-    
-        
+
     agencyIDBuf := make([]byte, AMMOUNT_OF_BYTES)
     binary.BigEndian.PutUint32(agencyIDBuf, uint32(agencyID))
 
-    _, err := protocol.conn.Write(agencyIDBuf)
-    if err != nil {
+    if err := protocol.writeAll(agencyIDBuf); err != nil {
         return nil, err
     }
 
     response := make([]byte, AMMOUNT_OF_BYTES)
-    _, err = protocol.conn.Read(response)
-    if err != nil {
+    if err := protocol.readAll(response); err != nil {
         return nil, err
     }
     length := binary.BigEndian.Uint32(response)
 
     data := make([]byte, length)
-    _, err = protocol.conn.Read(data)
-    if err != nil {
+    if err := protocol.readAll(data); err != nil {
         return nil, err
     }
-    
+
     winners, err := DeserializeWinners(data)
     if err != nil {
         return nil, err
     }
 
     return winners, nil
+}
+
+func (protocol *Protocol) writeAll(data []byte) error {
+    totalWritten := 0
+    for totalWritten < len(data) {
+        n, err := protocol.conn.Write(data[totalWritten:])
+        if err != nil {
+            return err
+        }
+        totalWritten += n
+    }
+    return nil
+}
+
+func (protocol *Protocol) readAll(data []byte) error {
+    totalRead := 0
+    for totalRead < len(data) {
+        n, err := protocol.conn.Read(data[totalRead:])
+        if err != nil {
+            return err
+        }
+        totalRead += n
+    }
+    return nil
 }

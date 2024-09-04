@@ -31,6 +31,10 @@ Case ID: The client sends a case ID to the server to indicate the type of reques
 2: Indicate that the client has finished sending bets.
 3: Request the list of winners for a specific agency.
 
+### Handling Short Reads and Writes
+
+To handle the issue of short reads and short writes, the server and the client ensures that it reads and writes exactly the number of bytes expected for each message respectively. This is done using helper methods.
+
 ### Serialization
 
 The serialization and deserialization of data are handled manually without using libraries like JSON. The custom methods ensure that the data is correctly serialized and deserialized for communication over sockets.
