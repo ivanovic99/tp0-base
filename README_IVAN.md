@@ -50,3 +50,9 @@ The serialize_winners function converts a list of winner document numbers into a
 #### Deserialize Winners
 
 The deserialize_winners function converts a byte stream back into a list of winner document numbers. It reads each length-prefixed string to reconstruct the list of winners.
+
+
+# IMPORTANT NOTE
+
+Before using the multiprocessing module, as it is requiered in Ej8, I used the threading module instead. I talk about this with Pablo Roca (and some other things like that the idiom of the Readme and code need to be in english, thats why everything is in english) and he told me that I could use the threading module (as it is a standar module and, under the hood, there are no actual threads but instead there are tasks that are executed in a sequential way by a single thread which is pooling tasks) but the point of those exercises was to do it "manually". He told me to leave it like that but to keep in mind that, even though it is a valid solution, it is not the one that was intended to be done. I just wanted to clarify this point and that he also told me that, even that there are no actual threads, there are tasks that could potentially be executed in a way where "shared variables" could be corrupted, therefore it is important to use locks to avoid this even though the threading library says it is thread-safe as there are no actual threads being fired.
+If you have any questions about this, please let me know. 
