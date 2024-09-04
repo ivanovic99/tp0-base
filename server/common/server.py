@@ -5,6 +5,9 @@ from .protocol import Protocol
 from .utils import store_bets, load_bets, has_won
 
 TOTAL_CLIENTS = 2
+BETS = 1
+OK = 2
+WINNERS = 3
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -17,6 +20,7 @@ class Server:
         self._finished_clients = 0
         self._total_clients = TOTAL_CLIENTS
         self._winners = {1: [], 2: []}
+        self._lock = threading.Lock()
         self._barrier = threading.Barrier(self._total_clients)
 
 
@@ -54,16 +58,17 @@ class Server:
             while not has_finished:
                 try:
                     case_id = protocol.receive_case()
-                    if case_id == 1:
+                    if case_id == BETS:
                         bets = protocol.receive_bets()
                         if not bets:
                             has_finished = True
                         try:
-                            store_bets(bets)
+                            with self._lock:
+                                store_bets(bets)
                             logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(bets)}')
                         except Exception as e:
                             logging.info(f'action: apuesta_recibida | result: fail | cantidad: {len(bets)}')
-                    elif case_id == 2:
+                    elif case_id == OK:
                         has_finished = True
                 except Exception as e:
                     logging.error("action: receive_message | result: fail | error: {e}")
@@ -81,7 +86,7 @@ class Server:
                 self.__perform_draw()
 
             case_id = protocol.receive_case()
-            if case_id == 3:
+            if case_id == WINNERS:
                 logging.info(f'action: receive_case | result: success | case_id: {case_id}')
                 agency_id = protocol.receive_agency_id()
                 logging.info(f'action: receive_agency_id | result: success | agency_id: {agency_id}')
