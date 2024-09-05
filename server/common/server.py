@@ -145,7 +145,7 @@ class Server:
         Perform a draw of the bets
         """
         bets = load_bets()
-        logging.info(f'action: sorteo | result: in_progress | cantidad: {len(bets)}')
+        
         for bet in bets:
             if has_won(bet):
                 logging.info(f'action: sorteo | result: winner | winner_id: {bet.document}')
