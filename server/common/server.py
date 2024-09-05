@@ -37,10 +37,15 @@ class Server:
         # the server
         while self._is_running:
             try:
-                client_sock = self.__accept_new_connection()
-                client_process = multiprocessing.Process(target=self.__handle_client_connection, args=(client_sock,))
-                client_process.start()
-                self._clients.append(client_process)
+                if len(self._clients) < self._total_clients:
+                    client_sock = self.__accept_new_connection()
+                    client_process = multiprocessing.Process(target=self.__handle_client_connection, args=(client_sock,))
+                    client_process.start()
+                    self._clients.append(client_process)
+                else:
+                    for client in self._clients:
+                        client.join()
+                    self.clients = []
             except socket.error as e:
                 if self._running:
                     logging.error(f"action: accept_new_connection | result: fail | error: {e}")
@@ -137,8 +142,7 @@ class Server:
         """
         Perform a draw of the bets
         """
-        bets = list(load_bets())
-        logging.info(f'action: sorteo | result: in_progress | cantidad: {len(bets)}')
+        bets = load_bets()
         for bet in bets:
             if has_won(bet):
                 temp_winners_list = self._winners[bet.agency]
