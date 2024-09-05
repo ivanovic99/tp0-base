@@ -7,6 +7,7 @@ import (
     "time"
     "os"
 	"strconv"
+	"io"
 
     "github.com/op/go-logging"
 )
@@ -56,22 +57,28 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
-// ReadBetsFromFile Reads bets from a CSV file
-func ReadBetsFromFile(filePath string, agencyID string) ([]Bet, error) {
+// ProcessBetsFromFile Reads and processes bets from a CSV file in batches
+func (c *Client) ProcessBetsFromFile(filePath string, protocol *Protocol) error {
     file, err := os.Open(filePath)
     if err != nil {
-        return nil, err
+        return err
     }
     defer file.Close()
 
-    var bets []Bet
     reader := csv.NewReader(bufio.NewReader(file))
+    batch := make([]Bet, 0, c.config.BatchMaxAmount)
+    totalBets := 0
+
     for {
         line, err := reader.Read()
-        if err != nil {
+        if err == io.EOF {
             break
         }
-        agency, _ := strconv.Atoi(agencyID)
+        if err != nil {
+            return err
+        }
+
+        agency, _ := strconv.Atoi(c.config.ID)
         number, _ := strconv.Atoi(line[4])
         bet := Bet{
             Agency:    agency,
@@ -81,19 +88,46 @@ func ReadBetsFromFile(filePath string, agencyID string) ([]Bet, error) {
             Birthdate: line[3],
             Number:    number,
         }
-        bets = append(bets, bet)
+
+        batch = append(batch, bet)
+
+        if len(batch) >= c.config.BatchMaxAmount {
+            if err := c.sendBatchAndWait(protocol, batch); err != nil {
+                return err
+            }
+            totalBets += len(batch)
+            batch = batch[:0]
+        }
     }
-    return bets, nil
+
+    // Send any remaining bets
+    if len(batch) > 0 {
+        if err := c.sendBatchAndWait(protocol, batch); err != nil {
+            return err
+        }
+        totalBets += len(batch)
+    }
+
+    log.Infof("action: process_file_complete | result: success | client_id: %v | total_bets_sent: %v", c.config.ID, totalBets)
+    return nil
+}
+
+func (c *Client) sendBatchAndWait(protocol *Protocol, batch []Bet) error {
+    select {
+    case <-c.stop:
+        return nil
+    default:
+        if err := protocol.SendBets(batch); err != nil {
+            log.Errorf("action: send_bets | result: fail | client_id: %v | error: %v", c.config.ID, err)
+            return err
+        }
+        time.Sleep(c.config.LoopPeriod)
+        return nil
+    }
 }
 
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
-    bets, err := ReadBetsFromFile("./app/.data/dataset/agency-" + c.config.ID + ".csv", c.config.ID)
-    if err != nil {
-        log.Errorf("action: read_bets | result: fail | error: %v", err)
-        return
-    }
-    log.Infof("action: read_bets | result: success | total_bets: %v", len(bets))
     if c.config.BatchMaxAmount > 10 {
         log.Infof("action: config | result: adjust_batch_maxAmount | original_value: %v | new_value: 10", c.config.BatchMaxAmount)
         c.config.BatchMaxAmount = 10
@@ -105,31 +139,18 @@ func (c *Client) StartClientLoop() {
     protocol := NewProtocol(c.conn)
     defer c.conn.Close()
 
-    for bet_number := 0; bet_number < len(bets); bet_number += c.config.BatchMaxAmount {
-        end := bet_number + c.config.BatchMaxAmount
-        if end > len(bets) {
-            end = len(bets)
-        }
-        batch := bets[bet_number:end]
-
-        select {
-        case <-c.stop:
-            log.Infof("action: stop_client_loop | result: success | client_id: %v", c.config.ID)
-            return
-        default:
-            
-            if err := protocol.SendBets(batch); err != nil {
-                log.Errorf("action: send_bets | result: fail | client_id: %v | error: %v", c.config.ID, err)
-                return
-            }
-
-            time.Sleep(c.config.LoopPeriod)
-        }
-    }
-    if err := protocol.SendOk(); err != nil {
-        log.Errorf("action: send_bets | result: fail | client_id: %v | error: %v", c.config.ID, err)
+    filePath := "./app/.data/dataset/agency-" + c.config.ID + ".csv"
+    err := c.ProcessBetsFromFile(filePath, protocol)
+    if err != nil {
+        log.Errorf("action: process_bets | result: fail | client_id: %v | error: %v", c.config.ID, err)
         return
     }
+
+    if err := protocol.SendOk(); err != nil {
+        log.Errorf("action: send_ok | result: fail | client_id: %v | error: %v", c.config.ID, err)
+        return
+    }
+
     ok, err := protocol.ReceiveOk()
     if err != nil {
         log.Errorf("action: receive_ok | result: fail | client_id: %v | error: %v", c.config.ID, err)
@@ -138,7 +159,7 @@ func (c *Client) StartClientLoop() {
     if ok {
         log.Infof("action: receive_ok | result: success | client_id: %v", c.config.ID)
         log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
-        } else {
+    } else {
         log.Infof("action: receive_ok | result: success | client_id: %v", c.config.ID)
         log.Infof("action: loop_finished | result: failure | message: Not all batches could be correctly processed | client_id: %v", c.config.ID)
     }
@@ -150,7 +171,6 @@ func (c *Client) StartClientLoop() {
         return
     }
     log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", len(winners))
-
 }
 
 // StopClientLoop Stops the client loop and closes the connection
