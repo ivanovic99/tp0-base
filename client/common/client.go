@@ -128,9 +128,9 @@ func (c *Client) sendBatchAndWait(protocol *Protocol, batch []Bet) error {
 
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
-    if c.config.BatchMaxAmount > 10 {
-        log.Infof("action: config | result: adjust_batch_maxAmount | original_value: %v | new_value: 10", c.config.BatchMaxAmount)
-        c.config.BatchMaxAmount = 10
+    if c.config.BatchMaxAmount > 73 {
+        log.Infof("action: config | result: adjust_batch_maxAmount | original_value: %v | new_value: 73", c.config.BatchMaxAmount)
+        c.config.BatchMaxAmount = 73
     }
 
     if err := c.createClientSocket(); err != nil {
