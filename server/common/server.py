@@ -4,7 +4,9 @@ import threading
 from .protocol import Protocol
 from .utils import store_bets, load_bets, has_won
 
+# This value will be provided via environment variable in the next exercise with the full solution/optimization
 TOTAL_CLIENTS = 2
+
 BETS = 1
 OK = 2
 WINNERS = 3
@@ -36,10 +38,15 @@ class Server:
         # the server
         while self._is_running:
             try:
-                client_sock = self.__accept_new_connection()
-                client_thread = threading.Thread(target=self.__handle_client_connection, args=(client_sock,))
-                client_thread.start()
-                self._clients.append(client_thread)
+                if len(self._clients) < self._total_clients:
+                    client_sock = self.__accept_new_connection()
+                    client_thread = threading.Thread(target=self.__handle_client_connection, args=(client_sock,))
+                    client_thread.start()
+                    self._clients.append(client_thread)
+                else:
+                    for client_thread in self._clients:
+                        client_thread.join()
+                    self._clients = []
             except socket.error as e:
                 if self._running:
                     logging.error(f"action: accept_new_connection | result: fail | error: {e}")
@@ -137,7 +144,7 @@ class Server:
         """
         Perform a draw of the bets
         """
-        bets = list(load_bets())
+        bets = load_bets()
         logging.info(f'action: sorteo | result: in_progress | cantidad: {len(bets)}')
         for bet in bets:
             if has_won(bet):
