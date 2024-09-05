@@ -59,6 +59,7 @@ func (c *Client) createClientSocket() error {
 }
 
 // ReadBetsFromFile Reads bets from a CSV file
+// In Ej8 there is an optimization for the use of this function
 func ReadBetsFromFile(filePath string, agencyID string) ([]Bet, error) {
     file, err := os.Open(filePath)
     if err != nil {
