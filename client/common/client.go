@@ -11,7 +11,7 @@ import (
     "github.com/op/go-logging"
 )
 
-const EIGHT_KB_BATCH_SIZE = 10
+const EIGHT_KB_BATCH_SIZE = 73
 
 var log = logging.MustGetLogger("log")
 
